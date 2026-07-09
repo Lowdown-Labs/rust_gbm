@@ -1,0 +1,30 @@
+[package]
+name = "rust_gbm"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.70"
+license = "Apache-2.0"
+description = "Zero-config gradient boosting for regression and classification. Pure Rust, no dependencies, histogram binned, and compiles to WebAssembly."
+repository = "https://github.com/Lowdown-Labs/rust_GBM"
+authors = ["Raj <dev@gimmelowdown.com>"]
+readme = "README.md"
+keywords = ["gbm", "gradient-boosting", "machine-learning", "tabular", "wasm"]
+categories = ["algorithms", "science", "wasm"]
+exclude = [".github/*"]
+
+[lib]
+# rlib for native consumers; cdylib so the `wasm` feature can emit a wasm-bindgen module.
+crate-type = ["rlib", "cdylib"]
+
+[features]
+# Off by default so the core stays dependency free. Turn on for the browser:
+#   wasm-pack build --features wasm
+wasm = ["dep:wasm-bindgen"]
+
+[dependencies]
+wasm-bindgen = { version = "0.2", optional = true }
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1

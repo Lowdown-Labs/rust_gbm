@@ -1,0 +1,46 @@
+name: publish
+
+# Publishes to crates.io when the version in Cargo.toml changes on main.
+# No tags needed. Re-running on an already published version is a no-op.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'Cargo.toml'
+      - 'src/**'
+      - 'README.md'
+      - 'LICENSE'
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Read version from Cargo.toml
+        id: v
+        run: echo "version=$(grep -m1 '^version' Cargo.toml | cut -d'"' -f2)" >> "$GITHUB_OUTPUT"
+
+      - name: Is this version already on crates.io?
+        id: check
+        run: |
+          code=$(curl -sS -o /dev/null -w "%{http_code}" \
+            -H "User-Agent: lowdown-labs-ci" \
+            "https://crates.io/api/v1/crates/rust_gbm/${{ steps.v.outputs.version }}")
+          echo "http $code for version ${{ steps.v.outputs.version }}"
+          if [ "$code" = "200" ]; then echo "exists=true" >> "$GITHUB_OUTPUT"; else echo "exists=false" >> "$GITHUB_OUTPUT"; fi
+
+      - name: Test before publishing
+        if: steps.check.outputs.exists == 'false'
+        run: cargo test
+
+      - name: Publish
+        if: steps.check.outputs.exists == 'false'
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        run: cargo publish
+
+      - name: Skip
+        if: steps.check.outputs.exists == 'true'
+        run: echo "rust_gbm ${{ steps.v.outputs.version }} is already published, nothing to do."
